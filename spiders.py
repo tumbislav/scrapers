@@ -81,7 +81,7 @@ class PixivSpider(Spider):
             print('Can not load cookies')
 
         self.params = {
-            'lang':'zh',
+            'lang':'en',
             'source':'pc',
             'view_type':'page',
             'ref':'wwwtop_accounts_index'
