@@ -15,6 +15,7 @@ import json
 import logging
 from http import cookiejar, HTTPStatus
 from bs4 import BeautifulSoup
+from helper import SimpleCrypt
 
 
 logger = logging.getLogger('scr')
@@ -36,16 +37,6 @@ class Spider:
 
 
 class PixivSpider(Spider):
-    post_url = 'https://accounts.pixiv.net/login?lang=zh&source=pc&view_type=page&ref=wwwtop_accounts_index'
-
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                             '(KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36',
-               'Referer': 'https://www.pixiv.net/'}
-
-    start_headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                                   '(KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36',
-                     'Referer': ''}
-
     front_url = 'https://www.pixiv.net/'
     multi_front_url = 'https://www.pixiv.net'
     detail_url = 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id='
@@ -69,25 +60,14 @@ class PixivSpider(Spider):
     really_multipic_url = {}
 
     def __init__(self, site_def: dict):
-        self.site_def = site_def
         super().__init__()
-        self.headers = Pixiv.headers
-        self.session.headers = self.headers
-        self.session.cookies = cookiejar.LWPCookieJar(filename = 'pixiv_cookies')
-        try:
-            self.session.cookies.load(filename = 'pixiv_cookies', ignore_discard = True)
-            print('Load cookies successfully')
-        except Exception as e:
-            print('Can not load cookies')
 
-        self.params = {
-            'lang':'en',
-            'source':'pc',
-            'view_type':'page',
-            'ref':'wwwtop_accounts_index'
-        }
+        self.session.headers = site_def['headers']
+        self.session.cookies = cookiejar.LWPCookieJar(site_def['cookie-file'])
 
-        self.datas = {
+        self.params = site_def['params']
+
+        self.data = {
             'pixiv_id': '',
             'password': '',
             'captcha': '',
@@ -97,12 +77,13 @@ class PixivSpider(Spider):
             'ref': 'wwwtop_accounts_index',
             'return_to': 'http://www.pixiv.net/',
         }
+        self.site_def = site_def
 
     def get_postkey(self):
-        r = self.session.get(Pixiv.post_url, params = self.params)
+        r = self.session.get(self.site_def['url']['post-url'], params=self.params)
         soup = BeautifulSoup(r.content, 'lxml')
         post_key = soup.find_all('input')[0]['value']
-        self.datas['post_key'] = post_key
+        self.data['post_key'] = post_key
 
     def check_login(self):
         """
@@ -111,12 +92,24 @@ class PixivSpider(Spider):
         """
         return self.check_page(self.site_def['url']['user-settings']) == HTTPStatus.OK
 
-    def login(self, username, password):
-        self.get_postkey()
-        self.datas['pixiv_id'] = username
-        self.datas['password'] = password
-        post_data = self.session.post(Pixiv.post_url, data = self.datas)
-        self.session.cookies.save(ignore_discard = True, ignore_expires = True)
+    def login(self, crypt: SimpleCrypt, account_name='account') -> bool:
+        """
+        Log in using the named account in site_def. The username and password are encrypted.
+        :param crypt: decryptor, already initialized with the appropriate key
+        :param account_name: the name of the account in self.site_def
+        :return: whether login succeeded
+        """
+        try:
+            self.get_postkey()
+            self.data['pixiv_id'] = crypt.decrypt(self.site_def[account_name]['username'])
+            self.data['password'] = crypt.decrypt(self.site_def[account_name]['password'])
+            post_data = self.session.post(self.site_def['post-url'], data=self.data)
+            self.session.cookies.save(ignore_discard=True, ignore_expires=True)
+
+            logger.info('logged into site {}'.format(self.site_def['slug']))
+            return True
+        finally:
+            return False
 
     def start_spider(self, start_url, maxPage): 
         Pixiv.start_headers['Referer'] = 'https://www.pixiv.net'

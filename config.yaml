@@ -9,10 +9,19 @@ GLOBAL:
 
 sites:
   pixiv:
-    agent-string: 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0'
+    slug: pixiv
+    cookie-file: pixiv-cookies
+    headers:
+      User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0
+      Referer: https://www.pixiv.net/
+    params:
+      lang: en
+      source: pc
+      view_type: page
+      ref: wwwtop_accounts_index
     account:
-      username: 'gAAAAABb6BlEVvGKGIJlbgS9ufQA3JIFSuYqh4XyBjNPBpS9mfqnDaCbuD3v-XcL_EJPuuh-iqaMy7eLbMDWODpUAq2JsreiKA=='
-      password: 'gAAAAABb6Bk1kYJHS0Cn11e0TGL0fbvvCKV03PfdVZqpWceb4OwlQNAWukd9fUWAjWf2oZwN8Po6Iv3W3oxf-ev54vqh8OPv1w=='
+      username: gAAAAABb6BlEVvGKGIJlbgS9ufQA3JIFSuYqh4XyBjNPBpS9mfqnDaCbuD3v-XcL_EJPuuh-iqaMy7eLbMDWODpUAq2JsreiKA==
+      password: gAAAAABb6Bk1kYJHS0Cn11e0TGL0fbvvCKV03PfdVZqpWceb4OwlQNAWukd9fUWAjWf2oZwN8Po6Iv3W3oxf-ev54vqh8OPv1w==
     url:
       user-settings: https://www.pixiv.net/setting_user.php
-      post: https://accounts.pixiv.net/login?lang=en&source=pc&view_type=page&ref=wwwtop_accounts_index
+      post-url: https://accounts.pixiv.net/login?lang=en&source=pc&view_type=page&ref=wwwtop_accounts_index

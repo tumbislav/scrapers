@@ -13,7 +13,7 @@ import os
 import logging
 import time
 from config import Configuration
-from spiders import Pixiv
+from spiders import PixivSpider
 from helper import SimpleCrypt
 
 
@@ -75,17 +75,12 @@ def start():
     config.set_global('working-dir', args.working_dir)
     start_time = time.time()
 
-    spider = Pixiv()
     site_name = 'pixiv'
-    site_def = config.get_site(site_name)
+    spider = PixivSpider(config.get_site(site_name))
 
     if not spider.check_login():
         master_password = input('Enter master password\n')
-        crypt = SimpleCrypt(master_password)
-        username = crypt.decrypt(site_def['account']['username'])
-        password = crypt.decrypt(site_def['account']['password'])
-        spider.login_in(username, password)
-        logger.info(f'logged into site {site_name}')
+        spider.login(SimpleCrypt(master_password))
     else:
         logger.info(f'already logged into site {site_name}')
 
@@ -95,7 +90,6 @@ def start():
 
     count = 0
     multi_count = 0
-    spider = Pixiv()
     if spider.check_login():
         print('logged in')
     else:
