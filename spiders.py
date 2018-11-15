@@ -15,8 +15,8 @@ import json
 import logging
 from http import cookiejar, HTTPStatus
 from bs4 import BeautifulSoup
-from helper import SimpleCrypt
-
+from helper import SimpleCrypt, ScraperException
+from config import Configuration
 
 logger = logging.getLogger('scr')
 
@@ -66,17 +66,7 @@ class PixivSpider(Spider):
         self.session.cookies = cookiejar.LWPCookieJar(site_def['cookie-file'])
 
         self.params = site_def['params']
-
-        self.data = {
-            'pixiv_id': '',
-            'password': '',
-            'captcha': '',
-            'g_recaptcha_response': '',
-            'post_key': '',
-            'source': 'pc',
-            'ref': 'wwwtop_accounts_index',
-            'return_to': 'http://www.pixiv.net/',
-        }
+        self.data = site_def['data']
         self.site_def = site_def
 
     def get_postkey(self):
@@ -232,5 +222,31 @@ def main(multi=False):
     print(f'downloaded {count} pictures,{multi_count} manga')
 
 
-if __name__ == '__main__':
-    main()
+class OpenClipartSpider(Spider):
+    """
+
+    """
+    def __init__(self, site_def: dict):
+        super().__init__()
+
+        self.session.headers = site_def['headers']
+        self.session.cookies = cookiejar.LWPCookieJar(site_def['cookie-file'])
+
+        self.params = site_def['params']
+        self.data = site_def['data']
+        self.site_def = site_def
+
+
+def get_spider(conf: Configuration, site: str) -> Spider:
+    """
+    Return the appropriate spider for the site.
+    :param site: the slug name of the site
+    :return: an instance of the appropriate spider, or None
+    """
+    site_def = conf.get_site(site)  # don't handle the exception, let it propagate
+    if site == 'pixiv':
+        return PixivSpider(site_def)
+    elif site == 'openclipart':
+        return OpenClipartSpider(site_def)
+    else:
+        raise ScraperException('get_spider', 'No spider for site {}'.format(site))

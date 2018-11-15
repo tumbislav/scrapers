@@ -25,3 +25,12 @@ sites:
     url:
       user-settings: https://www.pixiv.net/setting_user.php
       post-url: https://accounts.pixiv.net/login?lang=en&source=pc&view_type=page&ref=wwwtop_accounts_index
+    data:
+      pixiv_id: ''
+      password: ''
+      captcha: ''
+      g_recaptcha_response: ''
+      post_key: ''
+      source: pc
+      ref: wwwtop_accounts_index
+      return_to: http://www.pixiv.net/

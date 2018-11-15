@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument('-l', '--log', help='the name of the log file', default='output.log')
     parser.add_argument('-g', '--log-verbosity', help='increase verbosity of file log', action='count', default=1)
     parser.add_argument('-w', '--working-dir', help='the path to the working directory', default=os.getcwd())
+    parser.add_argument('-s', '--site', help='the site to crawl')
     return parser.parse_args()
 
 
@@ -75,28 +76,18 @@ def start():
     config.set_global('working-dir', args.working_dir)
     start_time = time.time()
 
-    site_name = 'pixiv'
-    spider = PixivSpider(config.get_site(site_name))
+    spider = PixivSpider(config.get_site(args.site))
 
     if not spider.check_login():
         master_password = input('Enter master password\n')
         spider.login(SimpleCrypt(master_password))
     else:
-        logger.info(f'already logged into site {site_name}')
+        logger.info('already logged into site {}'.format(args.site))
 
     logger.info(time.strftime('finished in %H:%M:%S', time.gmtime(time.time() - start_time)))
 
-
-
     count = 0
     multi_count = 0
-    if spider.check_login():
-        print('logged in')
-    else:
-        username = input('Enter your username\n')
-        password = input('Enter your password\n')
-        spider.login_in(username, password)
-        print('logged in')
 
     spider.start_spider(Pixiv.begin_url, int(Pixiv.setMaxPage) + 1)
 
