@@ -11,6 +11,9 @@ sites:
   pixiv:
     slug: pixiv
     cookie-file: pixiv-cookies
+    rank: daily  # ['daily', 'weekly', 'monthly', 'male']
+    refer: day  # ['day', 'week', 'month', 'male']
+
     headers:
       User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0
       Referer: https://www.pixiv.net/
@@ -23,8 +26,13 @@ sites:
       username: gAAAAABb6BlEVvGKGIJlbgS9ufQA3JIFSuYqh4XyBjNPBpS9mfqnDaCbuD3v-XcL_EJPuuh-iqaMy7eLbMDWODpUAq2JsreiKA==
       password: gAAAAABb6Bk1kYJHS0Cn11e0TGL0fbvvCKV03PfdVZqpWceb4OwlQNAWukd9fUWAjWf2oZwN8Po6Iv3W3oxf-ev54vqh8OPv1w==
     url:
+      front-url: https://www.pixiv.net/
+#      multi-front-url: https://www.pixiv.net/
+      detail-url: https://www.pixiv.net/member_illust.php?mode=medium&illust_id=
       user-settings: https://www.pixiv.net/setting_user.php
       post-url: https://accounts.pixiv.net/login?lang=en&source=pc&view_type=page&ref=wwwtop_accounts_index
+      ranking-url: https://www.pixiv.net/ranking.php?mode={}&p={}&format=json&tt={}
+      begin-url: https://www.pixiv.net/ranking.php?mode={}&ref=rn-h-{}-3&date={}'
     data:
       pixiv_id: ''
       password: ''

@@ -30,28 +30,13 @@ class Spider:
     def check_page(self, url):
         """
         Check if an url is available
-        :param url: the url to check.
+        :param url: the url to check
         :return: the HTTP status code
         """
         return self.session.get(url, allow_redirects=False).status_code
 
 
 class PixivSpider(Spider):
-    front_url = 'https://www.pixiv.net/'
-    multi_front_url = 'https://www.pixiv.net'
-    detail_url = 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id='
-
-    setDate = input('Enter date,format is YYYYMMDD, such as 20180101,last day is yesterday\n')
-    setList = input('Enter list you want to crawl:0.daily  1.weekly  2.monthly  3.male\n')
-    setMaxPage = input('Enter crawl page, max page is 10\n')
-
-    rankList = ['daily', 'weekly', 'monthly', 'male'] 
-    referInfo = ['day', 'week', 'month', 'male']
-    setRankList = rankList[int(setList)] 
-    setRef = referInfo[int(setList)] 
-
-    listDate = f'&date={setDate}'
-    begin_url = f'https://www.pixiv.net/ranking.php?mode={setRankList}&ref=rn-h-{setRef}-3' + listDate
 
     prepare_url = set()
     multipic_url = set()
@@ -67,6 +52,10 @@ class PixivSpider(Spider):
 
         self.params = site_def['params']
         self.data = site_def['data']
+        self.rank = site_def['rank']
+        self.refer = site_def['refer']
+        self.max_page = site_def['max-page'] + 1  # TODO: why +1?
+        self.begin_url = site_def['begin-url'].format(self.rank, self.refer, self.date)
         self.site_def = site_def
 
     def get_postkey(self):
@@ -101,53 +90,54 @@ class PixivSpider(Spider):
         finally:
             return False
 
-    def start_spider(self, start_url, maxPage): 
-        Pixiv.start_headers['Referer'] = 'https://www.pixiv.net'
-        self.session.headers = Pixiv.start_headers
-        rankListInfo = self.session.get(start_url)
-        rankListObj = BeautifulSoup(rankListInfo.content, 'lxml')
-        links = rankListObj.find_all('a','title')
-        verified_key = rankListObj.find('input', attrs={'name':'tt'})['value']
+    def start_spider(self):
+        """
+        Collect the initial page links for the spider to work on.
+        """
+        self.session.headers = self.site_def['headers']
+        rank_list_info = self.session.get(self.begin_url)
+        rank_list_obj = BeautifulSoup(rank_list_info.content, 'lxml')
+        links = rank_list_obj.find_all('a','title')
+        verified_key = rank_list_obj.find('input', attrs={'name': 'tt'})['value']
         for link in links:
-            Pixiv.prepare_url.add(Pixiv.front_url + link['href'])
-        for page in range(2, maxPage): 
-            Pixiv.next_pages_url.append(
-                f'https://www.pixiv.net/ranking.php?mode={Pixiv.setRankList}&p={str(page)}&format=json&tt={verified_key}')
+            self.prepare_url.add(self.site_def['front-url'] + link['href'])
+        for page in range(2, self.max_page):
+            self.next_pages_url.append(self.site_def['ranking-url'].format(self.rank, str(page), verified_key))
 
     def parse_json(self, pages_url):
         next_pages_info = self.session.get(pages_url)
         next_pages_json = json.loads(next_pages_info.text)
         for next_url in next_pages_json.get('contents'):
-            Pixiv.prepare_url.add(Pixiv.detail_url + str(next_url.get('illust_id')))
+            self.prepare_url.add(self.detail_url + str(next_url.get('illust_id')))
 
     def on_spider(self, page_url):
-        Pixiv.start_headers['Referer'] = Pixiv.begin_url
-        self.session.headers = Pixiv.start_headers
+        self.start_headers['Referer'] = self.begin_url
+        self.session.headers = self.start_headers
         detail_info = self.session.get(page_url)
         detail_infoObj = BeautifulSoup(detail_info.content, 'lxml')
         check_url = detail_infoObj.find('img', 'original-image')
         if check_url != None:
             download_url = detail_infoObj.find('img', 'original-image')['data-src']
-            Pixiv.origin_url[download_url] = page_url
+            self.origin_url[download_url] = page_url
         elif check_url == None:
-            Pixiv.multipic_url.add(page_url)
+            self.multipic_url.add(page_url)
 
 
     def parse_multipic(self, page_url):
-        Pixiv.start_headers['Referer'] = Pixiv.begin_url
-        self.session.headers = Pixiv.start_headers
+        self.start_headers['Referer'] = self.begin_url
+        self.session.headers = self.start_headers
         detail_info = self.session.get(page_url)
         detail_infoObj = BeautifulSoup(detail_info.content, 'lxml')
-        really_url = Pixiv.multi_front_url + detail_infoObj.find('a', 'read-more js-click-trackable')['href']
+        really_url = self.multi_front_url + detail_infoObj.find('a', 'read-more js-click-trackable')['href']
 
-        Pixiv.start_headers['Referer'] = page_url
-        self.session.headers = Pixiv.start_headers
+        self.start_headers['Referer'] = page_url
+        self.session.headers = self.start_headers
         multipic_detail_info = self.session.get(really_url)
         multipic_detail_infoObj = BeautifulSoup(multipic_detail_info.content, 'lxml')
-        Pixiv.really_multipic_url[really_url] = []
+        self.really_multipic_url[really_url] = []
         multipicUrlList = multipic_detail_infoObj.find_all('img', 'image')
         for multipicUrl in multipicUrlList:
-            Pixiv.really_multipic_url[really_url].append(
+            self.really_multipic_url[really_url].append(
                 multipicUrl['data-src'])
 
     def download_pic(self, download_link, page_url, file_path = f'Picture/{setRankList}/{setDate}'):
@@ -157,8 +147,8 @@ class PixivSpider(Spider):
         file_name = re.findall(r'\d{7,10}', page_url)[0]
         file_all_name = file_name + file_format
         file_final_name = os.path.join(file_path, file_all_name)
-        Pixiv.start_headers['Referer'] = page_url
-        self.session.headers = Pixiv.start_headers
+        self.start_headers['Referer'] = page_url
+        self.session.headers = self.start_headers
         try:
             download_pic = self.session.get(download_link)
             with open(file_final_name, 'wb') as f:
@@ -173,8 +163,8 @@ class PixivSpider(Spider):
         file_name = re.findall(r'\d{7,10}_\w\d{1,2}', download_link)[0]
         file_all_name = file_name + file_format
         file_final_name = os.path.join(file_path, file_all_name)
-        Pixiv.start_headers['Referer'] = page_url
-        self.session.headers = Pixiv.start_headers
+        self.start_headers['Referer'] = page_url
+        self.session.headers = self.start_headers
         try:
             download_pic = self.session.get(download_link)
             with open(file_final_name, 'wb') as f:
@@ -183,43 +173,34 @@ class PixivSpider(Spider):
             print('Download Error!', e)
 
 
-def main(multi=False):
-    count = 0
-    multi_count = 0
-    spider = Pixiv()
-    if spider.check_login():
-        print('logged in')
-    else:
-        username = input('Enter your username\n')
-        password = input('Enter your password\n')
-        spider.login_in(username, password)
-        print('logged in')
+    def main(self, multi=False):
+        count = 0
+        multi_count = 0
 
-    spider.start_spider(Pixiv.begin_url, int(Pixiv.setMaxPage) + 1)
+        self.start_spider()
 
-    for next_page in Pixiv.next_pages_url:
-        spider.parse_json(next_page)
+        for next_page in self.next_pages_url:
+            self.parse_json(next_page)
 
-    for url in Pixiv.prepare_url:
-        spider.on_spider(url)
+        for url in self.prepare_url:
+            self.on_spider(url)
 
-    for downloadUrl, pageUrl in Pixiv.origin_url.items():
-        count += 1
-        spider.download_pic(downloadUrl, pageUrl)
-        print(f'downloading {count} pictures')
+        for downloadUrl, pageUrl in self.origin_url.items():
+            count += 1
+            self.download_pic(downloadUrl, pageUrl)
+            logger.info(f'downloading {count} pictures')
 
-    if multi:
-        for multiUrl in Pixiv.multipic_url:
-            spider.parse_multipic(multiUrl)
+        if multi:
+            for multiUrl in self.multipic_url:
+                self.parse_multipic(multiUrl)
 
-        for page_url, multipic_urlList in Pixiv.really_multipic_url.items():
-            for multipicUrl in multipic_urlList:
-                multi_count += 1
-                spider.download_multipic(multipicUrl, page_url)
-                print(f'downloading {multi_count} manga')
+            for page_url, multipic_urlList in self.really_multipic_url.items():
+                for multipicUrl in multipic_urlList:
+                    multi_count += 1
+                    self.download_multipic(multipicUrl, page_url)
+                    logger.info(f'downloading {multi_count} manga')
 
-
-    print(f'downloaded {count} pictures,{multi_count} manga')
+        logger.info(f'downloaded {count} pictures,{multi_count} manga')
 
 
 class OpenClipartSpider(Spider):
@@ -240,6 +221,7 @@ class OpenClipartSpider(Spider):
 def get_spider(conf: Configuration, site: str) -> Spider:
     """
     Return the appropriate spider for the site.
+    :param conf: the Configuration object
     :param site: the slug name of the site
     :return: an instance of the appropriate spider, or None
     """

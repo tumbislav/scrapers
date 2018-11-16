@@ -89,15 +89,15 @@ def start():
     count = 0
     multi_count = 0
 
-    spider.start_spider(Pixiv.begin_url, int(Pixiv.setMaxPage) + 1)
+    spider.start_spider()
 
-    for next_page in Pixiv.next_pages_url:
+    for next_page in spider.next_pages_url:
         spider.parse_json(next_page)
 
-    for url in Pixiv.prepare_url:
+    for url in spider.prepare_url:
         spider.on_spider(url)
 
-    for downloadUrl, pageUrl in Pixiv.origin_url.items():
+    for downloadUrl, pageUrl in spider.origin_url.items():
         count += 1
         spider.download_pic(downloadUrl, pageUrl)
         print(f'downloading {count} pictures')
